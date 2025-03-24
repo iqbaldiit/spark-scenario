@@ -1,15 +1,9 @@
-'''
-This module is created to export all necessary libraries and other imports.
-If you need to declare a library that needed most of the scenario, you can import here
-and export it dynamically like sql functions
-'''
-
 import os
 import sys
+import time
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import *  # Import all functions here
-import pyspark.sql.functions as F  # Import all functions under alias F
+#import pyspark.sql.functions as F  # Import all functions under alias F
 
 # Set environment variables
 python_path = sys.executable
@@ -29,8 +23,20 @@ sc = SparkContext(conf=conf)
 sc.setLogLevel("ERROR")
 spark = SparkSession.builder.getOrCreate()
 
-# Dynamically get all functions from pyspark.sql.functions
-globals().update({name: getattr(F, name) for name in dir(F) if not name.startswith("_")})
+# # Dynamically import all functions from pyspark.sql.functions
+# globals().update({name: getattr(F, name) for name in dir(F) if not name.startswith("_")})
 
 # Export everything dynamically
-__all__ = ['spark', 'sc'] + [name for name in dir(F) if not name.startswith("_")]
+__all__ = ['spark', 'sc', 'start_timer', 'end_timer'] #+ [name for name in dir(F) if not name.startswith("_")]
+
+# Timer functions
+def start_timer():
+        """Start the execution timer."""
+        global start_time
+        start_time = time.time()
+
+def end_timer():
+        """End the execution timer and print the total execution time."""
+        end_time = time.time()
+        execution_time = end_time - start_time
+        print(f"Total execution time: {execution_time:.2f} seconds")

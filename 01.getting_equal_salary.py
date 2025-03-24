@@ -31,6 +31,10 @@ Approach->2: Self join
 
 '''
 from spark_session import *
+from pyspark.sql.functions import *
+
+# start timer to see execution time
+start_timer()
 
 #============ Data preparation===============
 oWorkers = [("001", "Monika", "Arora", 100000, "2014-02-20 09:00:00", "HR")
@@ -44,11 +48,13 @@ columns = ["workerid","firstname","lastname","salary","joiningdate","depart"]
 # convert the worker list to data frame
 df = spark.createDataFrame(oWorkers,columns)
 print()
-print("==========Raw Data=============")
+print("==========Input Data=============")
 
 df.show()
+print()
+print("==========Expected output=============")
 
-# #### ================ Approach->1 (Recommended):
+# # # #### ================ Approach->1 : using aggregation (best for large dataset)
 # Find salaries with more than one employee
 salary_counts = df.groupBy("salary").agg(count("workerid").alias("num_workers"))
 
@@ -59,22 +65,38 @@ salaries_with_multiple_workers = salary_counts.filter("num_workers > 1").select(
 oResult=df.join(salaries_with_multiple_workers,"salary","inner").select(
     "workerid","firstname","lastname","salary","joiningdate","depart"
 )
+
 oResult.show()
 
 
-###### ================ Approach-->2: (Not recommended)
+###### ================ Approach-->2.1: using raw SQL (Self join) (Small dataset is ok but large dataset it is more expensive)
 
-##Through SQL
-# df.createOrReplaceTempView("worktab")
-# spark.sql("select a.workerid,a.firstname,a.lastname,a.salary,a.joiningdate,a.depart from worktab a, worktab b where a.salary=b.salary and a.workerid !=b.workerid").show()
+# df.createOrReplaceTempView("worker")
+# spark.sql("""
+#     SELECT a.workerid, a.firstname, a.lastname, a.salary, a.joiningdate, a.depart
+#     FROM worker a
+#     JOIN worker b
+#     ON a.salary = b.salary AND a.workerid != b.workerid
+# """).show()
 
-##Through Spark DSL
-#finaldf = df.alias("a").join(df.alias("b"), (col("a.salary") == col("b.salary")) & (col("a.workerid") != col("b.workerid")), "inner").select(col("a.workerid"), col("a.firstname"), col("a.lastname"), col("a.salary"), col("a.joiningdate"), col("a.depart")).show()
 
+###### ================ Approach-->2.1: using spark DSL (self join)
+
+# df.alias("a").join(
+#     df.alias("b"),
+#     (col("a.salary") == col("b.salary")) & (col("a.workerid") != col("b.workerid")),
+#     "inner"
+# ).select(
+#     col("a.workerid"), col("a.firstname"), col("a.lastname"), col("a.salary"),
+#     col("a.joiningdate"), col("a.depart")
+# ).show()
 
 ## to show DAG or query estimation plan un comment the following lines and go to the url to see spark UI
 #input("Press Enter to exit...")
 #######http://localhost:4040/jobs/
+
+# end timer to see execution time
+end_timer()
 
 
 
