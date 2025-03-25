@@ -23,7 +23,6 @@
             |order_id|status_date|    status|
             +-------+----------+----------+
             |      1|     2-Jan|dispatched|
-            |      1|     3-Jan|dispatched|
             |      2|     2-Jan|dispatched|
             +-------+----------+----------+
 
