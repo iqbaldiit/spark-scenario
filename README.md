@@ -5,3 +5,6 @@
 3. In this project, I created a spark_session.py module where spark session is created, 
 and export all necessary libraries.
 4. When you just copy and paste from specific scenario consider the spark-session.py and set jdk file path as yours.
+5. There is pandas solution also in the "Pandas Solution" folder. But for this you have to install "pandas". 
+    --> go to terminal --> pip install pandas --> hit enter 
+
