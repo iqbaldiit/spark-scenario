@@ -75,7 +75,7 @@ df.printSchema()
 print()
 print("==========Expected output=============")
 
-# # # # #### ================ Approach->1 : (Using self join (DSL))
+# # # # #### ================ Approach->1 : ((DSL))
 
 # Convert login_date string to date
 df = df.withColumn("login_date", to_date(col("login_date"), "dd-MM-yyyy"))
