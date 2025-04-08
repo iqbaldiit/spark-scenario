@@ -6,7 +6,7 @@
 
     Input :-
             +-------+----------+----------+
-            |order_id|status_date|    status|
+            |order_id|status_date|  status|
             +-------+----------+----------+
             |      1|     1-Jan|   Ordered|
             |      1|     2-Jan|dispatched|
@@ -20,11 +20,12 @@
             +-------+----------+----------+
     Expected Output :-
             +-------+----------+----------+
-            |order_id|status_date|    status|
+            |order_id|status_date|  status|
             +-------+----------+----------+
             |      1|     2-Jan|dispatched|
             |      2|     2-Jan|dispatched|
             +-------+----------+----------+
+
 
     Solution Explanation:
         1. We have to find all orders whose status="dispatched"
@@ -41,7 +42,7 @@ from spark_session import *
 from pyspark.sql.functions import *
 from pyspark.sql.window import Window
 
-# start timer to see execution time
+#start timer to see execution time
 start_timer()
 
 # ============ Data Preparation
@@ -74,6 +75,7 @@ window=Window.partitionBy("order_id").orderBy("status_date")
 # add a column name as previous_status
 df=df.withColumn("previous_status", lag("status").over(window))
 
+df.show()
 # filter as per requirements
 df = df.filter((col("status") == "dispatched") & (col("previous_status") == "Ordered")) \
     .select("order_id", "status_date", "status")
