@@ -17,10 +17,11 @@ Input :-
         |     3|       Kate|     IJ|
         +------+-----------+-------+
 
+
 Expected Output :-
 
         +------+-----------+--------+
-        |cust_id|   cust_name| address|
+        |cust_id|  cust_name| address|
         +------+-----------+--------+
         |     1|   Mark Ray|[EF, AB]|
         |     2|Peter Smith|[CD, GH]|
@@ -52,7 +53,7 @@ data = [(1, "Mark Ray", "AB"),
 
 columns = ["cust_id", "cust_name", "address"]
 
-# convert the worker list to data frame
+# convert the data list to data frame
 df = spark.createDataFrame(data, columns)
 print()
 print("==========Input Data=============")
