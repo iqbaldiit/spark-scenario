@@ -63,33 +63,33 @@ print("==========Expected output=============")
 
 # # # # #### ================ Approach->1 : (DSL)
 
-# create window partition by duplicates and order by cust_id
-# window=Window.partitionBy("cust_name", "cust_phone", "cust_email").orderBy(col("cust_id").asc())
-#
-# # find the row number within thw window
-# df=df.withColumn("row_id",row_number().over(window))
-#
-# # keep the first row id as the requirement is keeping small cust_id
-# df=df.filter(df.row_id==1)
-#
-# # drop column row_id
-# df=df.drop("row_id")
-# df.show()
+#create window partition by duplicates and order by cust_id
+window=Window.partitionBy("cust_name", "cust_phone", "cust_email").orderBy(col("cust_id").asc())
 
+# find the row number within thw window
+df=df.withColumn("row_id",row_number().over(window))
 
+# keep the first row id as the requirement is keeping small cust_id
+df=df.filter(df.row_id==1)
 
-# # # # # #### ================ Approach->1 : (SQL))
-df.createOrReplaceTempView("tbl")
-sSQL="""
-    WITH CTE AS (
-        SELECT *
-        ,ROW_NUMBER() OVER (PARTITION BY cust_name,cust_phone,cust_email ORDER BY cust_id ASC) AS row_id 
-        FROM tbl
-    )
-    SELECT cust_id,cust_name,cust_phone,cust_email FROM CTE
-"""
-df=spark.sql(sSQL)
+# drop column row_id
+df=df.drop("row_id")
 df.show()
+
+
+
+# # # # # # #### ================ Approach->2 : (SQL))
+# df.createOrReplaceTempView("tbl")
+# sSQL="""
+#     WITH CTE AS (
+#         SELECT *
+#         ,ROW_NUMBER() OVER (PARTITION BY cust_name,cust_phone,cust_email ORDER BY cust_id ASC) AS row_id
+#         FROM tbl
+#     )
+#     SELECT cust_id,cust_name,cust_phone,cust_email FROM CTE
+# """
+# df=spark.sql(sSQL)
+# df.show()
 
 
 # # to show DAG or query estimation plan un comment the following lines and go to the url to see spark UI
