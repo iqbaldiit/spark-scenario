@@ -23,6 +23,7 @@ Input:
         |  5| iop| 24|  iop@gmail.com|
         | 15| lkj| 29|lkj@outlook.com|
         +---+----+---+---------------+
+Employees[1] with employee_salary[1]
 
         +---+----+---+---------------+------+
         | id|name|age|          email|salary|
@@ -33,6 +34,12 @@ Input:
         | 14| zxc| 30|        zxc.com|  2000|
         | 15| lkj| 29|lkj@outlook.com|  2000|
         +---+----+---+---------------+------+
+
+        1. Add a column name 'salary' in Employees table with default amount 10000
+        2. Combine two table into a single table
+        3. Keeps the record with valid email address
+        4. Remove duplicate (id) and prioritize 2nd table
+        5. Show()
 
 Expected output:
 
@@ -114,6 +121,7 @@ df_employees_salary.show()
 
 print()
 print("==========Expected output=============")
+
 
 # add a column name salary in employee df with default salary amount 1000
 df_employees=df_employees.withColumn("salary",lit(1000))
