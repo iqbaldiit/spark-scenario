@@ -127,9 +127,9 @@ df.show()
 
 
 
-# # to show DAG or query estimation plan un comment the following lines and go to the url to see spark UI
-# input("Press Enter to exit...")
-# ######http://localhost:4040/jobs/
+# to show DAG or query estimation plan un comment the following lines and go to the url to see spark UI
+#input("Press Enter to exit...")
+######http://localhost:4040/jobs/
 
 # end timer to see execution time
 end_timer()
