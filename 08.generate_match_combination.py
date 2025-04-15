@@ -15,6 +15,8 @@
             |Bangladesh|
             +----------+
 
+1. Self join
+
     Expected Output :-
             +--------------------+
             |             matches|
@@ -34,7 +36,6 @@
     2. print
 
 '''
-
 
 from spark_session import *
 from pyspark.sql.functions import *
@@ -56,22 +57,22 @@ df.show()
 print()
 print("==========Expected output=============")
 
-# # # # #### ================ Approach->1 : (Using self join (DSL))
-#
-# df=df.alias("tA").join(df.alias("tB"), col("tA.teams")<col("tB.teams"))\
-#     .select(concat_ws(" Vs ",col("tA.teams") , col("tB.teams")).alias("matches"))
-#
-# df.show()
+# # # #### ================ Approach->1 : (Using self join (DSL))
 
-# # # #### ================ Approach->2 : (Using self join (SQL))
-df.createOrReplaceTempView("Tournament")
-
-df=spark.sql("SELECT CONCAT(TA.teams, ' Vs ',TB.teams) AS matches "
-             " FROM Tournament TA"
-             " INNER JOIN Tournament TB ON TA.teams<TB.teams"
-)
+df=df.alias("tA").join(df.alias("tB"), col("tA.teams")>col("tB.teams"))\
+    .select(concat_ws(" Vs ",col("tA.teams") , col("tB.teams")).alias("matches"))
 
 df.show()
+
+# # # # #### ================ Approach->2 : (Using self join (SQL))
+# df.createOrReplaceTempView("Tournament")
+#
+# df=spark.sql("SELECT CONCAT(TA.teams, ' Vs ',TB.teams) AS matches "
+#              " FROM Tournament TA"
+#              " INNER JOIN Tournament TB ON TA.teams<TB.teams"
+# )
+#
+# df.show()
 
 # # to show DAG or query estimation plan un comment the following lines and go to the url to see spark UI
 # input("Press Enter to exit...")

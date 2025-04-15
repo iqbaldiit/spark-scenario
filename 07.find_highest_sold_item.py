@@ -19,6 +19,7 @@ input:
     |      9|       300|2012|      20| 7000|
     +-------+----------+----+--------+-----+
 
+
 Expected Output :-
 
         |sale_id|product_id|year|quantity|price|
@@ -29,6 +30,9 @@ Expected Output :-
         |      1|       100|2010|      25| 5000|
         +-------+----------+----+--------+-----+
 
+
+
+
 Solution Explanation: The problem stated that, we have to find out the highest quantity of product sold yearly.
                         The result should be sorted by year and quantity.
 
@@ -38,6 +42,8 @@ Approach-> : (Using window function)
     2. choose highest rank.
     3. print
 
+Note: RANK() assigns a unique rank to each distinct value, potentially skipping ranks for ties,
+        while DENSE_RANK() assigns consecutive ranks without gaps, even for ties.
 '''
 from spark_session import *
 from pyspark.sql.functions import *
@@ -73,7 +79,9 @@ print("==========Expected output=============")
 # # # #### ================ Approach->1 : (Using window (DSL))
 
 window=Window.partitionBy("year").orderBy(col("quantity").desc())
+
 df=df.withColumn("rank",dense_rank().over(window))
+
 df=df.filter(col("rank")==1).orderBy(col("year").desc(),col("quantity").desc())\
     .select("sale_id","product_id","year","quantity","price")
 df.show()
