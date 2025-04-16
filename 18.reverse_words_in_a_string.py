@@ -18,6 +18,14 @@ Output:
     +------------------+
     |ehT laicoS ammeliD|
     +------------------+
+
+Solution Explanation: The problem stated that, only the words of the sentence will be reversed not whole sentence
+
+Approach:
+    1. Split the sentence to array
+    2. reverse each element of the array
+    3. concat the array
+    4. show()
 '''
 from six import string_types
 
@@ -41,8 +49,8 @@ df.show()
 print()
 print("==========Expected output=============")
 
-# # # # #### ================ Approach->1 : ((DSL))
-#
+# # # # #### ================ Approach->1 (using UDF) : ((DSL))
+
 # user defined function for keep sentence structure as it is
 # def reverse_word(sString):
 #     return " ".join([word[::-1] for word in sString.split(" ")])
@@ -50,6 +58,9 @@ print("==========Expected output=============")
 # # register the function to use in dsl
 # udf_reversed=udf(reverse_word,StringType())#
 # df=df.withColumn("reverse word", udf_reversed(df.word))
+#df.show()
+
+# # # # #### ================ Approach->2 (split, transform and array_join) : ((DSL))
 
 df=(df.withColumn("word_ary", split(df.word," "))
     .withColumn("reversed_words", transform("word_ary", lambda x:reverse(x)))
@@ -58,7 +69,7 @@ df=(df.withColumn("word_ary", split(df.word," "))
 df.show()
 
 
-# # # # # #### ================ Approach->2 : ((SQL))
+# # # # # #### ================ Approach->3 : ((SQL))
 # df.createOrReplaceTempView("tbl")
 # sSQL="""
 #     SELECT CONCAT_WS(' ',TRANSFORM (SPLIT(word,' '), t->REVERSE(t))) AS reverse_word
