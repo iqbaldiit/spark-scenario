@@ -1,5 +1,6 @@
 '''
-    You are given a table 'Participants' containing participant names and their rankings across multiple events.
+    You are given a table 'Participants' containing participant names and their
+    rankings across multiple events.
     The rank column contains a list of rankings achieved by each participant.
 
     write a solution to find the participant(s) who have achieved rank 1 the most times.
@@ -11,9 +12,9 @@
         +----+---------------+
         |name|           rank|
         +----+---------------+
-        |   a|   [1, 1, 1, 3]|
-        |   b|   [1, 2, 3, 4]|
-        |   c|[1, 1, 1, 1, 4]|
+        |   a|   [1, 1, 1, 3]| 3
+        |   b|   [1, 2, 3, 4]| 1
+        |   c|[1, 1, 1, 1, 4]| 4
         |   d|            [3]|
         +----+---------------+
 
@@ -23,6 +24,13 @@
         +----+
         |   c|
         +----+
+
+
+1.  explode
+2.  filter rank=1
+3.  group by (name) count (rank)
+4. max
+
 
     Solution Explanation: The problem stated that, we have to find out who participate most rank 1.
 
@@ -65,21 +73,21 @@ print("==========Expected output=============")
 
 # # # # #### ================ Approach->1 : (using Explode (DSL))
 
-# df=df.withColumn("rank",explode(col("rank")))
-# df=df.filter(col("rank")==1)
-# df=df.groupBy(col("name")).agg(count(col("rank")).alias("rk_count"))
-# max_rk=df.agg(max(col("rk_count")).alias("max_rk")).collect()[0][0]
-# df=df.filter(col("rk_count")==max_rk).select("name")
-# df.show()
-
-# # # # #### ================ Approach->2 : (using size and filter (DSL))
-df=df.withColumn("rk_count",expr("size(filter(rank,x->x=1))")) # get count of 1
-max_rk=df.agg(max(col("rk_count")).alias("max_rk")).collect()[0][0] # find max rank count
+df=df.withColumn("rank",explode(col("rank")))
+df=df.filter(col("rank")==1)
+df=df.groupBy(col("name")).agg(count(col("rank")).alias("rk_count"))
+max_rk=df.agg(max(col("rk_count")).alias("max_rk")).collect()[0][0]
 df=df.filter(col("rk_count")==max_rk).select("name")
 df.show()
 
-# # # # #### ================ Approach->3 : (using explode (SQL))
-#
+# # # # # # #### ================ Approach->2 : (using size and filter (DSL))
+#df=df.withColumn("rk_count",expr("size(filter(rank,x->x=1))")) # get count of 1
+# max_rk=df.agg(max(col("rk_count")).alias("max_rk")).collect()[0][0] # find max rank count
+# df=df.filter(col("rk_count")==max_rk).select("name")
+# df.show()
+
+# # # # # # #### ================ Approach->3 : (using explode (SQL))
+# # #
 # df.createOrReplaceTempView("Participants")
 # df=spark.sql("WITH cte AS ("
 #              " SELECT name,rk FROM Participants"
@@ -93,8 +101,8 @@ df.show()
 #
 # df.show()
 
-# # # # # #### ================ Approach->4 : (size and filter (SQL))
-# #
+# # # # # # #### ================ Approach->4 : (size and filter (SQL))
+# # #
 # df.createOrReplaceTempView("Participants")
 # df=spark.sql(" SELECT name FROM ("
 #              " SELECT name, DENSE_RANK() OVER (ORDER BY rk_count DESC) AS crk FROM ("
