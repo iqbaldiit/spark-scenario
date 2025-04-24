@@ -12,6 +12,32 @@ A Deposit increases the balance and a Withdrawal decreases it.
 
 Return the result table ordered by account_id.
 
+Inputs:
+
+        +--------------+----------+------+----------------+
+        |transaction_id|account_id|amount|transaction_type|
+        +--------------+----------+------+----------------+
+        |           123|        11|    10|         Deposit|
+        |           124|        11|    20|         Deposit|
+        |           126|        21|    20|         Deposit|
+        |           125|        11|     5|      Withdrawal|
+        |           128|        21|    10|      Withdrawal|
+        |           130|        31|    98|         Deposit|
+        |           132|        31|    36|      Withdrawal|
+        |           140|        21|    16|         Deposit|
+        +--------------+----------+------+----------------+
+
+Expected Outputs
+
+        +----------+-----------------+
+        |account_id|FINAL_ACC_BALANCE|
+        +----------+-----------------+
+        |        11|               25|
+        |        21|               26|
+        |        31|               62|
+        +----------+-----------------+
+
+
 '''
 
 from spark_session import *
