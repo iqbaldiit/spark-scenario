@@ -87,7 +87,7 @@ df=(df.groupBy("account_id")
 df.show()
 
 
-# # # # #### ================ Approach->2.0 : (Using SQL (Window))
+# # # # #### ================ Approach->2.0 : (SQL)
 # # create temp table
 # df.createOrReplaceTempView("tbl")
 #
