@@ -65,34 +65,34 @@ df.show()
 print()
 print("==========Expected output=============")
 
-# # # # # #### ================ Approach->1 : (DSL)
-# window=Window.partitionBy("emp_id").orderBy("year")
-#
-# df=(df.withColumn("pre_Salary",lag("salary",1,0).over(window))
-#     .withColumn("increase_salary"
-#                 ,when(col("pre_Salary")==0,0)
-#                 .otherwise((col("salary")-col("pre_Salary"))))
-#     .drop("pre_Salary")
-#     .orderBy(col("emp_id").asc())
-# )
-#
-# df.show()
+# # # # #### ================ Approach->1 : (DSL)
+window=Window.partitionBy("emp_id").orderBy("year")
 
-# # # # # #### ================ Approach->2 : ((SQL))
-
-df.createOrReplaceTempView("tbl")
-
-sSQL="""
-    SELECT tab.emp_id,tab.salary,tab.year
-    ,CASE WHEN tab.pre_salary IS NULL THEN 0
-        ELSE tab.salary-tab.pre_salary END AS  increase_salary
-    FROM  (SELECT *, LAG (salary) OVER (PARTITION BY emp_id ORDER BY year) AS pre_salary 
-    FROM tbl)tab
-"""
-
-df=spark.sql(sSQL)
+df=(df.withColumn("pre_Salary",lag("salary",1,0).over(window))
+    .withColumn("increase_salary"
+                ,when(col("pre_Salary")==0,0)
+                .otherwise((col("salary")-col("pre_Salary"))))
+    .drop("pre_Salary")
+    .orderBy(col("emp_id").asc())
+)
 
 df.show()
+
+# # # # # # #### ================ Approach->2 : ((SQL))
+#
+# df.createOrReplaceTempView("tbl")
+#
+# sSQL="""
+#     SELECT tab.emp_id,tab.salary,tab.year
+#     ,CASE WHEN tab.pre_salary IS NULL THEN 0
+#         ELSE tab.salary-tab.pre_salary END AS  increase_salary
+#     FROM  (SELECT *, LAG (salary) OVER (PARTITION BY emp_id ORDER BY year) AS pre_salary
+#     FROM tbl)tab
+# """
+#
+# df=spark.sql(sSQL)
+#
+# df.show()
 
 # # to show DAG or query estimation plan un comment the following lines and go to the url to see spark UI
 # input("Press Enter to exit...")
