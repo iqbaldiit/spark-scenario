@@ -54,6 +54,7 @@ data = [
 columns = ["emp_id", "salary", "year"]
 
 # convert to data frame
+#df = spark.createDataFrame(data,columns).cache()
 df = spark.createDataFrame(data,columns)
 
 
@@ -61,6 +62,7 @@ print()
 print("==========Input Data=============")
 
 df.show()
+
 
 print()
 print("==========Expected output=============")
