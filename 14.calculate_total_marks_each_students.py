@@ -62,9 +62,9 @@ print()
 print("==========Expected output=============")
 
 # # # # # #### ================ Approach->1: Solution 1: : ((DSL))
-#
-# df=df.withColumn("total",expr("telugu + english + maths + science + social"))
-# df.show()
+
+df=df.withColumn("total",expr("telugu + english + maths + science + social"))
+df.show()
 
 # # # # #### ================ Approach->1: Solution 2: : ((DSL))
 
