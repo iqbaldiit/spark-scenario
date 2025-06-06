@@ -183,17 +183,34 @@ df=(
 df.show()
 
 # # # # #### ================ Approach->2 : (SQL)
-# df.createOrReplaceTempView("Samples")
+# sales_df.createOrReplaceTempView("sales")
+# product_df.createOrReplaceTempView("products")
+#
 #
 # sSQL="""
 #
-#     SELECT sample_id,dna_sequence,species
-#     ,CASE WHEN dna_sequence LIKE 'ATG%' THEN 1 ELSE 0 END has_start
-#     ,CASE WHEN dna_sequence LIKE '%TAA' OR  dna_sequence LIKE '%TAG' OR dna_sequence LIKE '%TGA'
-#         THEN 1 ELSE 0 END has_stop
-#     ,CASE WHEN dna_sequence LIKE '%ATAT%' THEN 1 ELSE 0 END has_atat
-#     ,CASE WHEN dna_sequence LIKE '%GGG%' THEN 1 ELSE 0 END has_ggg
-#     FROM Samples ORDER BY sample_id ASC
+#     WITH season_sales AS (
+#         SELECT product_id
+#         ,CASE WHEN MONTH(sale_date) IN (12,1,2) THEN 'Winter'
+#             WHEN MONTH(sale_date) IN (3,4,5) THEN 'Spring'
+#             WHEN MONTH(sale_date) IN (6,7,8) THEN 'Summer'
+#             ELSE 'Fall'
+#             END AS season
+#         ,quantity
+#         ,quantity*price AS revenue
+#         FROM sales
+#     )
+#     , total_sale AS (
+#         SELECT S.season,P.category,SUM(quantity) AS total_quantity, SUM(revenue) AS total_revenue  FROM season_sales S
+#         INNER JOIN products P ON S.product_id=P.product_id
+#         GROUP BY S.season,P.category
+#     )
+#     ,rank_sales AS (
+#         SELECT S.*
+#         ,DENSE_RANK() OVER(PARTITION BY season ORDER BY total_quantity DESC,total_revenue DESC) AS rk
+#         FROM total_sale S
+#     )
+#     SELECT season,category,total_quantity,total_revenue FROM rank_sales WHERE rk=1
 #
 # """
 # df=spark.sql(sSQL)
