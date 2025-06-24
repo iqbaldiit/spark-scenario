@@ -1,3 +1,4 @@
+# Source: https://leetcode.com/problems/find-consistently-improving-employees/solutions/6841397/simple-best-solution/
 '''
 
 	Table: library_books
@@ -166,7 +167,6 @@ df.show()
 # borrowing_records_df.createOrReplaceTempView("borrowing_records")
 #
 # sSQL="""
-#
 #     WITH borrow_book AS (
 #         SELECT book_id,COUNT(*) AS current_borrowers FROM borrowing_records
 #         WHERE return_date IS NULL GROUP BY book_id
@@ -177,7 +177,6 @@ df.show()
 #     )
 #     SELECT book_id,title,author,genre,publication_year,current_borrowers
 #     FROM remaining_book WHERE remaining=0 ORDER BY current_borrowers DESC, title ASC
-#
 # """
 # df=spark.sql(sSQL)
 # df.show()
