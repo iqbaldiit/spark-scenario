@@ -160,7 +160,7 @@ performance_reviews_df.show()
 print()
 print("==========Expected output=============")
 
-# # # # # #### ================ Approach->1 : (DSL)
+# # # # #### ================ Approach->1 : (DSL)
 
 # create a window to get most recent review
 window=Window.partitionBy("employee_id").orderBy(desc("review_date"))
@@ -192,7 +192,36 @@ df=(df.join(employees_df,"employee_id")
     )
 df.show()
 
-
+# # # # #### ================ Approach->2 : (SQL)
+# employees_df.createOrReplaceTempView("employees")
+# performance_reviews_df.createOrReplaceTempView("performance_reviews")
+#
+# sSQL="""
+#     WITH ranked_review AS (
+#         SELECT employee_id,rating
+#         ,ROW_NUMBER() OVER (PARTITION BY employee_id ORDER BY review_date DESC) rk
+#         FROM performance_reviews
+#     )
+#     ,last_three_review AS (
+#         SELECT employee_id
+#         ,MAX(CASE WHEN rk=1 THEN rating END) AS last_rating
+#         ,MAX(CASE WHEN rk=2 THEN rating END) AS middle_rating
+#         ,MAX(CASE WHEN rk=3 THEN rating END) AS first_rating
+#         FROM ranked_review WHERE rk<=3
+#         GROUP BY employee_id
+#
+#     )
+#     ,qualified_employees AS (
+#         SELECT R.employee_id,E.name,R.last_rating-R.first_rating AS improvement_score
+#         FROM last_three_review R
+#         INNER JOIN employees E ON R.employee_id=E.employee_id
+#         WHERE first_rating IS NOT NULL AND last_rating>middle_rating AND middle_rating>first_rating
+#     )
+#     SELECT * FROM qualified_employees WHERE improvement_score>0
+#     ORDER BY improvement_score DESC, name ASC
+# """
+# df=spark.sql(sSQL)
+# df.show()
 
 ## to show DAG or query estimation plan un comment the following lines and go to the url to see spark UI
 #input("Press Enter to exit...")
