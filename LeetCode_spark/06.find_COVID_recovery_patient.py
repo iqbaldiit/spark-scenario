@@ -157,58 +157,58 @@ covid_test_df.show()
 print()
 print("==========Expected output=============")
 
-# # # # # #### ================ Approach->1 : (DSL)
-#
-# # get those patient who are positive
-# positive_df=(covid_test_df.where(col("result")=="Positive")
-#              .groupby("patient_id").agg(min("test_date").alias("pos_date"))
-#              )
-#
-# df=(covid_test_df.alias("N")
-#              .join(positive_df.alias("P"),"patient_id")
-#              .where((col("N.test_date")>col("P.pos_date")) & (col("result")=="Negative"))
-#              .groupby("N.patient_id","P.pos_date").agg(min("N.test_date").alias("neg_date"))
-#              .withColumn("recovery_time", datediff(col("neg_date"),col("P.pos_date")))
-#              .join(patients_df.alias("PT"),"patient_id")
-#              .select("PT.patient_id","PT.patient_name","PT.age","recovery_time")
-#              .orderBy(asc("recovery_time"),asc("patient_name"))
-# )
-#
-#
-# df.show()
+# # # # #### ================ Approach->1 : (DSL)
+
+# get those patient who are positive
+positive_df=(covid_test_df.where(col("result")=="Positive")
+             .groupby("patient_id").agg(min("test_date").alias("pos_date"))
+             )
+
+df=(covid_test_df.alias("N")
+             .join(positive_df.alias("P"),"patient_id")
+             .where((col("N.test_date")>col("P.pos_date")) & (col("result")=="Negative"))
+             .groupby("N.patient_id","P.pos_date").agg(min("N.test_date").alias("neg_date"))
+             .withColumn("recovery_time", datediff(col("neg_date"),col("P.pos_date")))
+             .join(patients_df.alias("PT"),"patient_id")
+             .select("PT.patient_id","PT.patient_name","PT.age","recovery_time")
+             .orderBy(asc("recovery_time"),asc("patient_name"))
+)
 
 
-
-# # # #### ================ Approach->2 : (SQL)
-patients_df.createOrReplaceTempView("patients")
-covid_test_df.createOrReplaceTempView("covid_tests")
-
-sSQL="""
-    WITH pos AS (
-        SELECT patient_id, MIN(test_date) AS pos_date 
-        FROM covid_tests 
-        WHERE result = 'Positive' 
-        GROUP BY patient_id
-    ), 
-    neg AS (
-        SELECT CT.patient_id, pos.pos_date, MIN(CT.test_date) AS neg_date 
-        FROM covid_tests CT 
-        JOIN pos ON CT.patient_id = pos.patient_id 
-        WHERE CT.result = 'Negative' AND CT.test_date > pos.pos_date 
-        GROUP BY CT.patient_id, pos.pos_date
-    ), 
-    result AS (
-        SELECT N.patient_id, P.patient_name, P.age, 
-               DATEDIFF(DAY,N.pos_date,N.neg_date) AS recovery_time
-        FROM neg N 
-        JOIN patients P ON P.patient_id = N.patient_id
-    )
-    SELECT * 
-    FROM result 
-    ORDER BY recovery_time, patient_name;
-"""
-df=spark.sql(sSQL)
 df.show()
+
+
+
+# # # # #### ================ Approach->2 : (SQL)
+# patients_df.createOrReplaceTempView("patients")
+# covid_test_df.createOrReplaceTempView("covid_tests")
+#
+# sSQL="""
+#     WITH pos AS (
+#         SELECT patient_id, MIN(test_date) AS pos_date
+#         FROM covid_tests
+#         WHERE result = 'Positive'
+#         GROUP BY patient_id
+#     ),
+#     neg AS (
+#         SELECT CT.patient_id, pos.pos_date, MIN(CT.test_date) AS neg_date
+#         FROM covid_tests CT
+#         JOIN pos ON CT.patient_id = pos.patient_id
+#         WHERE CT.result = 'Negative' AND CT.test_date > pos.pos_date
+#         GROUP BY CT.patient_id, pos.pos_date
+#     ),
+#     result AS (
+#         SELECT N.patient_id, P.patient_name, P.age,
+#                DATEDIFF(DAY,N.pos_date,N.neg_date) AS recovery_time
+#         FROM neg N
+#         JOIN patients P ON P.patient_id = N.patient_id
+#     )
+#     SELECT *
+#     FROM result
+#     ORDER BY recovery_time, patient_name;
+# """
+# df=spark.sql(sSQL)
+# df.show()
 
 ## to show DAG or query estimation plan un comment the following lines and go to the url to see spark UI
 #input("Press Enter to exit...")
