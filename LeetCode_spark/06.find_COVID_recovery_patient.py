@@ -163,7 +163,6 @@ print("==========Expected output=============")
 positive_df=(covid_test_df.where(col("result")=="Positive")
              .groupby("patient_id").agg(min("test_date").alias("pos_date"))
              )
-
 df=(covid_test_df.alias("N")
              .join(positive_df.alias("P"),"patient_id")
              .where((col("N.test_date")>col("P.pos_date")) & (col("result")=="Negative"))
