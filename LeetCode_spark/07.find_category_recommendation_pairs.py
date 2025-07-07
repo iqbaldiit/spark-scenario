@@ -159,23 +159,42 @@ product_purchases_df.show()
 print()
 print("==========Expected output=============")
 
-# # # # # #### ================ Approach->1 : (DSL)
-user_categories_df= (product_purchases_df.join(product_info_df,'product_id')
-     .select('user_id','category').distinct()
-)
+# # # # # # #### ================ Approach->1 : (DSL)
+# user_categories_df= (product_purchases_df.join(product_info_df,'product_id')
+#      .select('user_id','category').distinct()
+# )
+#
+# df=(user_categories_df.alias("uc1").join(user_categories_df.alias("uc2"),"user_id")
+#     .where(col("uc1.category")<col("uc2.category"))
+#     .select("user_id",col("uc1.category").alias("category1"),col("uc2.category").alias("category2"))
+# )
+# df=(df.groupby(col('category1'),col('category2'))
+#     .agg(countDistinct(col('user_id')).alias('customer_count'))
+#     .where(col('customer_count')>=3)
+#     .orderBy(desc('customer_count'),'category1','category2')
+# )
+# df.show()
 
-df=(user_categories_df.alias("uc1").join(user_categories_df.alias("uc2"),"user_id")
-    .where(col("uc1.category")<col("uc2.category"))
-    .select("user_id",col("uc1.category").alias("category1"),col("uc2.category").alias("category2"))
-)
-df=(df.groupby(col('category1'),col('category2'))
-    .agg(countDistinct(col('user_id')).alias('customer_count'))
-    .where(col('customer_count')>=3)
-    .orderBy(desc('customer_count'),'category1','category2')
-)
+# # # #### ================ Approach->2 : (SQL)
+product_purchases_df.createOrReplaceTempView("ProductPurchases")
+product_info_df.createOrReplaceTempView("ProductInfo")
+
+sSQL="""
+    WITH UserCategories AS (
+        SELECT DISTINCT PP.user_id, P.category FROM ProductPurchases PP
+        INNER JOIN ProductInfo P ON PP.product_id = P.product_id
+    ),CategoryPairs AS (
+        SELECT UC1.category AS category1,UC2.category AS category2,
+            COUNT(DISTINCT UC1.user_id) AS customer_count
+        FROM UserCategories UC1
+        INNER JOIN UserCategories UC2 ON UC1.user_id = UC2.user_id AND UC1.category < UC2.category
+        GROUP BY UC1.category, UC2.category
+        HAVING COUNT(DISTINCT UC1.user_id) >= 3
+    )
+    SELECT category1,category2,customer_count FROM CategoryPairs ORDER BY customer_count DESC,category1 ASC,category2 ASC;
+"""
+df=spark.sql(sSQL)
 df.show()
-
-
 
 ## to show DAG or query estimation plan un comment the following lines and go to the url to see spark UI
 #input("Press Enter to exit...")
