@@ -1,4 +1,4 @@
-# Source : https://leetcode.com/problems/find-category-recommendation-pairs/solutions/6918020/simple-best-solution-by-iqbaldiit-9x2m/
+# Source : https://leetcode.com/problems/find-category-recommendation-pairs/solutions/6930008/simple-best-solution-by-iqbaldiit-4nzu/
 '''
 	Table: ProductPurchases
 
