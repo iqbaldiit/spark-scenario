@@ -1,3 +1,4 @@
+# Source: https://leetcode.com/problems/find-product-recommendation-pairs/solutions/6945275/simple-best-solution-by-iqbaldiit-t2jc/
 '''
 	Table: ProductPurchases
 
@@ -168,8 +169,7 @@ df=(user_products_df.alias("uc1").join(user_products_df.alias("uc2"),"user_id")
             ,col("uc1.product_id").alias("product1_id")
             ,col("uc2.product_id").alias("product2_id")
             ,col("uc1.category").alias("product1_category")
-            ,col("uc2.category").alias("product2_category")
-            )
+            ,col("uc2.category").alias("product2_category"))
 )
 
 df=(df.groupby(col('product1_id'),col('product2_id'),col('product1_category'),col('product2_category'))
@@ -177,7 +177,6 @@ df=(df.groupby(col('product1_id'),col('product2_id'),col('product1_category'),co
     .where(col('customer_count')>=3)
     .orderBy(desc('customer_count'),'product1_id','product2_id')
 )
-
 df.show()
 
 # # # # #### ================ Approach->2 : (SQL)
