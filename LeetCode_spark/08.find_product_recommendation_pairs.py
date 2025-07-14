@@ -184,18 +184,21 @@ df.show()
 # product_info_df.createOrReplaceTempView("ProductInfo")
 #
 # sSQL="""
-#     WITH UserCategories AS (
-#         SELECT DISTINCT PP.user_id, P.category FROM ProductPurchases PP
+#     WITH UserProducts AS (
+#         SELECT DISTINCT PP.user_id,PP.product_id, P.category FROM ProductPurchases PP
 #         INNER JOIN ProductInfo P ON PP.product_id = P.product_id
-#     ),CategoryPairs AS (
-#         SELECT UC1.category AS category1,UC2.category AS category2,
-#             COUNT(DISTINCT UC1.user_id) AS customer_count
-#         FROM UserCategories UC1
-#         INNER JOIN UserCategories UC2 ON UC1.user_id = UC2.user_id AND UC1.category < UC2.category
-#         GROUP BY UC1.category, UC2.category
-#         HAVING COUNT(DISTINCT UC1.user_id) >= 3
+#     ),ProductPairs AS(
+#         SELECT	UP1.product_id AS product1_id
+#             ,UP2.product_id AS product2_id
+#             ,UP1.category AS product1_category
+#             ,UP2.category AS product2_category
+#             ,COUNT(UP1.user_id) customer_count
+#         FROM UserProducts UP1
+#         INNER JOIN UserProducts UP2 ON UP1.user_id=UP2.user_id AND UP1.product_id<UP2.product_id
+#         GROUP BY UP1.product_id,UP2.product_id,UP1.category,UP2.category
+#         HAVING COUNT(UP1.user_id)>=3
 #     )
-#     SELECT category1,category2,customer_count FROM CategoryPairs ORDER BY customer_count DESC,category1 ASC,category2 ASC;
+#     SELECT * FROM ProductPairs ORDER BY customer_count DESC,product1_id ASC,product2_id ASC;
 # """
 # df=spark.sql(sSQL)
 # df.show()
