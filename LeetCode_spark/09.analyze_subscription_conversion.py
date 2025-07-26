@@ -150,14 +150,23 @@ paid_df=(df.filter(col("activity_type")=="paid")
 
 df=free_df.join(paid_df,"user_id","inner").orderBy("user_id")
 df.show()
-#df.show()
+
 
 # # # # #### ================ Approach->2 : (SQL)
-# product_purchases_df.createOrReplaceTempView("ProductPurchases")
-# product_info_df.createOrReplaceTempView("ProductInfo")
+# df.createOrReplaceTempView("UserActivity")
+#
 #
 # sSQL="""
-
+#     WITH FreeTrial AS (
+#         SELECT user_id, ROUND(AVG(activity_duration*1.00),2) AS trial_avg_duration FROM UserActivity WHERE activity_type='free_trial'
+#         GROUP BY user_id
+#     ),Paid AS (
+#         SELECT user_id, ROUND(AVG(activity_duration*1.00),2) AS paid_avg_duration FROM UserActivity WHERE activity_type='paid'
+#         GROUP BY user_id
+#     )
+#     SELECT P.user_id,FT.trial_avg_duration,P.paid_avg_duration FROM Paid P
+#     INNER JOIN FreeTrial FT ON P.user_id=FT.user_id
+#     ORDER BY P.user_id
 # """
 # df=spark.sql(sSQL)
 # df.show()
