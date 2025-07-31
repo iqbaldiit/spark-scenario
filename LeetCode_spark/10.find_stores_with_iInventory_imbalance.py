@@ -1,4 +1,4 @@
-# Source:
+# Source: https://leetcode.com/problems/find-stores-with-inventory-imbalance/solutions/7026586/simple-best-solution-by-iqbaldiit-409p/
 '''
 	Table: stores
 
