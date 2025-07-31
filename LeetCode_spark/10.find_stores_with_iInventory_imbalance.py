@@ -201,11 +201,30 @@ df=(
 df.show()
 
 # # # # #### ================ Approach->2 : (SQL)
-# df.createOrReplaceTempView("UserActivity")
+# store_df.createOrReplaceTempView("stores")
+# inv_df.createOrReplaceTempView("inventory")
 #
 #
 # sSQL="""
-
+#     WITH exp_product AS(
+#         SELECT e.store_id, i.product_name AS most_exp_product,CAST(e.price AS FLOAT), i.quantity FROM inventory i
+#         INNER JOIN (SELECT store_id,MAX(CAST(price AS FLOAT)) price FROM inventory GROUP BY store_id HAVING COUNT(DISTINCT product_name)>2) e
+#         ON e.store_id=i.store_id AND e.price=i.price
+#     )
+#     , cheap_product AS (
+#         SELECT c.store_id, i.product_name AS cheapest_product,CAST(c.price AS FLOAT), i.quantity FROM inventory i
+#         INNER JOIN (SELECT store_id,MIN(CAST(price AS FLOAT)) price FROM inventory GROUP BY store_id  HAVING COUNT(DISTINCT product_name)>2) c
+#         ON c.store_id=i.store_id AND c.price=i.price
+#     )
+#     , final AS(
+#         SELECT e.store_id,s.store_name,s.location,e.most_exp_product,c.cheapest_product
+#         ,ROUND(c.quantity/e.quantity,2) AS imbalance_ratio
+#         FROM exp_product e
+#         INNER JOIN cheap_product c ON e.store_id=c.store_id
+#         INNER JOIN stores s ON e.store_id=s.store_id
+#         WHERE e.quantity<c.quantity
+#     )
+#     SELECT * FROM final ORDER BY imbalance_ratio DESC, store_name
 # """
 # df=spark.sql(sSQL)
 # df.show()
