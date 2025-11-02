@@ -175,31 +175,7 @@ df.show()
 # trips_df.createOrReplaceTempView("trips")
 #
 # sSQL="""
-#     WITH driver_effeciency AS (
-#         SELECT driver_id
-#         , (distance_km*1.00 / fuel_consumed) AS efficiency
-#         , CASE WHEN MONTH(trip_date) BETWEEN 1 AND 6 THEN 1 ELSE 2 END AS half_year
-#         FROM trips
-#     ), driver_effeciency_avg AS (
-#         SELECT driver_id,half_year
-#         ,AVG(efficiency) avg_effeciency
-#         FROM driver_effeciency DE
-#         GROUP BY driver_id,half_year
-#     ), final_result AS (
-#         SELECT driver_id
-#         , SUM(CASE WHEN half_year=1 THEN avg_effeciency ELSE 0 END) AS first_half_avg
-#         , SUM(CASE WHEN half_year=2 THEN avg_effeciency ELSE 0 END) AS second_half_avg
-#         FROM driver_effeciency_avg
-#         GROUP BY driver_id
-#     )
-#     SELECT F.driver_id,D.driver_name
-#     ,ROUND(F.first_half_avg,2) AS first_half_avg
-#     ,ROUND(F.second_half_avg,2) AS second_half_avg
-#     ,ROUND(F.second_half_avg-F.first_half_avg,2) AS efficiency_improvement
-#     FROM final_result F
-#     INNER JOIN drivers D ON F.driver_id=D.driver_id
-#     WHERE first_half_avg>0 AND second_half_avg>0 AND ROUND(F.second_half_avg-F.first_half_avg,2)>0
-#     ORDER BY efficiency_improvement DESC, driver_name ASC
+
 # """
 # df=spark.sql(sSQL)
 # df.show()
