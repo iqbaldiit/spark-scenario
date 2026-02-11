@@ -156,44 +156,44 @@ print()
 print("==========Expected output=============")
 
 #  # # # # # #### ================ Approach->1 : (DSL)
-# df=(df.groupby("session_id","user_id").agg(
-#     min(col("event_timestamp")).alias("session_start")
-#     ,min(col("event_timestamp")).alias("session_end")
-#     ,sum(when(col("event_type")=="scroll",1).otherwise(0)).alias("scroll_count")
-#     ,sum(when(col("event_type")=="click",1).otherwise(0)).alias("click_count")
-#     ,sum(when(col("event_type")=="purchase",1).otherwise(0)).alias("purchase_count")
-#     )
-# )
-#
-# #df=df.withColumn("duration", (unix_timestamp(col("session_end"))-unix_timestamp(col("session_start")))/60)
-#
-# df.show()
-
-
-# # # #### ================ Approach->2 : (SQL)
-df.createOrReplaceTempView("app_events")
-
-
-sSQL="""
-    WITH zombie AS (
-        SELECT A.session_id
-        ,A.user_id
-        ,MIN(event_timestamp) AS session_start
-        ,MAX(event_timestamp) AS session_end
-        ,COUNT(CASE WHEN A.event_type='scroll' THEN 1 END) AS scroll_count
-        ,COUNT(CASE WHEN A.event_type='click' THEN 1 END) AS click_count
-        ,COUNT(CASE WHEN A.event_type='purchase' THEN 1 END) AS purchase_count
-        FROM app_events A GROUP BY A.session_id, A.user_id
-    ), zombie_session AS (
-        SELECT Z.*,DATEDIFF(MINUTE,Z.session_start,Z.session_end) AS duration FROM zombie Z
+df=(df.groupby("session_id","user_id").agg(
+    min(col("event_timestamp")).alias("session_start")
+    ,min(col("event_timestamp")).alias("session_end")
+    ,sum(when(col("event_type")=="scroll",1).otherwise(0)).alias("scroll_count")
+    ,sum(when(col("event_type")=="click",1).otherwise(0)).alias("click_count")
+    ,sum(when(col("event_type")=="purchase",1).otherwise(0)).alias("purchase_count")
     )
-    SELECT Z.session_id,Z.user_id,Z.duration AS session_duration_minutes, Z.scroll_count 
-    FROM zombie_session Z
-    WHERE duration>30 AND scroll_count>4 AND (click_count*1.00/scroll_count)<0.20 AND purchase_count<=0
-    ORDER BY scroll_count DESC, session_id ASC;
-"""
-df=spark.sql(sSQL)
+)
+
+df=df.withColumn("duration", (unix_timestamp(col("session_end"))-unix_timestamp(col("session_start")))/60)
+
 df.show()
+
+
+# # # # #### ================ Approach->2 : (SQL)
+# df.createOrReplaceTempView("app_events")
+#
+#
+# sSQL="""
+#     WITH zombie AS (
+#         SELECT A.session_id
+#         ,A.user_id
+#         ,MIN(event_timestamp) AS session_start
+#         ,MAX(event_timestamp) AS session_end
+#         ,COUNT(CASE WHEN A.event_type='scroll' THEN 1 END) AS scroll_count
+#         ,COUNT(CASE WHEN A.event_type='click' THEN 1 END) AS click_count
+#         ,COUNT(CASE WHEN A.event_type='purchase' THEN 1 END) AS purchase_count
+#         FROM app_events A GROUP BY A.session_id, A.user_id
+#     ), zombie_session AS (
+#         SELECT Z.*,DATEDIFF(MINUTE,Z.session_start,Z.session_end) AS duration FROM zombie Z
+#     )
+#     SELECT Z.session_id,Z.user_id,Z.duration AS session_duration_minutes, Z.scroll_count
+#     FROM zombie_session Z
+#     WHERE duration>30 AND scroll_count>4 AND (click_count*1.00/scroll_count)<0.20 AND purchase_count<=0
+#     ORDER BY scroll_count DESC, session_id ASC;
+# """
+# df=spark.sql(sSQL)
+# df.show()
 
 ## to show DAG or query estimation plan un comment the following lines and go to the url to see spark UI
 #input("Press Enter to exit...")
