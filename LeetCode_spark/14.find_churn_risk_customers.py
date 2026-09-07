@@ -1,0 +1,208 @@
+# Source:
+'''
+https://leetcode.com/problems/find-churn-risk-customers/description/
+	Table: subscription_events
+
+	+------------------+---------+
+	| Column Name      | Type    |
+	+------------------+---------+
+	| event_id         | int     |
+	| user_id          | int     |
+	| event_date       | date    |
+	| event_type       | varchar |
+	| plan_name        | varchar |
+	| monthly_amount   | decimal |
+	+------------------+---------+
+	event_id is the unique identifier for this table.
+	event_type can be start, upgrade, downgrade, or cancel.
+	plan_name can be basic, standard, premium, or NULL (when event_type is cancel).
+	monthly_amount represents the monthly subscription cost after this event.
+	For cancel events, monthly_amount is 0.
+	Write a solution to Find Churn Risk Customers - users who show warning signs before churning. A user is considered churn risk customer if they meet ALL the following criteria:
+
+	Currently have an active subscription (their last event is not cancel).
+	Have performed at least one downgrade in their subscription history.
+	Their current plan revenue is less than 50% of their historical maximum plan revenue.
+	Have been a subscriber for at least 60 days.
+	Return the result table ordered by days_as_subscriber in descending order, then by user_id in ascending order.
+
+	The result format is in the following example.
+
+
+
+	Example:
+
+	Input:
+
+	subscription_events table:
+
+	+----------+---------+------------+------------+-----------+----------------+
+	| event_id | user_id | event_date | event_type | plan_name | monthly_amount |
+	+----------+---------+------------+------------+-----------+----------------+
+	| 1        | 501     | 2024-01-01 | start      | premium   | 29.99          |
+	| 2        | 501     | 2024-02-15 | downgrade  | standard  | 19.99          |
+	| 3        | 501     | 2024-03-20 | downgrade  | basic     | 9.99           |
+	| 4        | 502     | 2024-01-05 | start      | standard  | 19.99          |
+	| 5        | 502     | 2024-02-10 | upgrade    | premium   | 29.99          |
+	| 6        | 502     | 2024-03-15 | downgrade  | basic     | 9.99           |
+	| 7        | 503     | 2024-01-10 | start      | basic     | 9.99           |
+	| 8        | 503     | 2024-02-20 | upgrade    | standard  | 19.99          |
+	| 9        | 503     | 2024-03-25 | upgrade    | premium   | 29.99          |
+	| 10       | 504     | 2024-01-15 | start      | premium   | 29.99          |
+	| 11       | 504     | 2024-03-01 | downgrade  | standard  | 19.99          |
+	| 12       | 504     | 2024-03-30 | cancel     | NULL      | 0.00           |
+	| 13       | 505     | 2024-02-01 | start      | basic     | 9.99           |
+	| 14       | 505     | 2024-02-28 | upgrade    | standard  | 19.99          |
+	| 15       | 506     | 2024-01-20 | start      | premium   | 29.99          |
+	| 16       | 506     | 2024-03-10 | downgrade  | basic     | 9.99           |
+	+----------+---------+------------+------------+-----------+----------------+
+	Output:
+
+	+----------+--------------+------------------------+-----------------------+--------------------+
+	| user_id  | current_plan | current_monthly_amount | max_historical_amount | days_as_subscriber |
+	+----------+--------------+------------------------+-----------------------+--------------------+
+	| 501      | basic        | 9.99                   | 29.99                 | 79                 |
+	| 502      | basic        | 9.99                   | 29.99                 | 70                 |
+	+----------+--------------+------------------------+-----------------------+--------------------+
+	Explanation:
+
+	User 501:
+	Currently active: Last event is downgrade to basic (not cancelled)
+	Has downgrades: Yes, 2 downgrades in history
+	Current revenue (9.99) vs max (29.99): 9.99/29.99 = 33.3% (less than 50%)
+	Days as subscriber: Jan 1 to Mar 20 = 79 days (at least 60)
+	Result: Churn Risk Customer
+	User 502:
+	Currently active: Last event is downgrade to basic (not cancelled)
+	Has downgrades: Yes, 1 downgrade in history
+	Current revenue (9.99) vs max (29.99): 9.99/29.99 = 33.3% (less than 50%)
+	Days as subscriber: Jan 5 to Mar 15 = 70 days (at least 60)
+	Result: Churn Risk Customer
+	User 503:
+	Currently active: Last event is upgrade to premium (not cancelled)
+	Has downgrades: No downgrades in history
+	Result: Not at-risk (no downgrade history)
+	User 504:
+	Currently active: Last event is cancel
+	Result: Not at-risk (subscription cancelled)
+	User 505:
+	Currently active: Last event is 'upgrade' to standard (not cancelled)
+	Has downgrades: No downgrades in history
+	Result: Not at-risk (no downgrade history)
+	User 506:
+	Currently active: Last event is downgrade to basic (not cancelled)
+	Has downgrades: Yes, 1 downgrade in history
+	Current revenue (9.99) vs max (29.99): 9.99/29.99 = 33.3% (less than 50%)
+	Days as subscriber: Jan 20 to Mar 10 = 50 days (less than 60)
+	Result: Not at-risk (insufficient subscription duration)
+	Result table is ordered by days_as_subscriber DESC, then user_id ASC.
+
+	Note: days_as_subscriber is calculated from the first event date to the last event date for each user.
+
+'''
+from tkinter.constants import FIRST
+
+from pandas.core.computation.expressions import where
+from pyspark.sql.functions import month, unix_timestamp, datediff
+from six import integer_types
+
+from spark_session import *
+from pyspark.sql.functions import *
+from pyspark.sql.window import *
+
+
+# start timer to see execution time
+start_timer()
+
+#============ Data preparation===============
+data = [
+    (1, 501, '2024-01-01', 'start', 'premium', 29.99),
+    (2, 501, '2024-02-15', 'downgrade', 'standard', 19.99),
+    (3, 501, '2024-03-20', 'downgrade', 'basic', 9.99),
+    (4, 502, '2024-01-05', 'start', 'standard', 19.99),
+    (5, 502, '2024-02-10', 'upgrade', 'premium', 29.99),
+    (6, 502, '2024-03-15', 'downgrade', 'basic', 9.99),
+    (7, 503, '2024-01-10', 'start', 'basic', 9.99),
+    (8, 503, '2024-02-20', 'upgrade', 'standard', 19.99),
+    (9, 503, '2024-03-25', 'upgrade', 'premium', 29.99),
+    (10, 504, '2024-01-15', 'start', 'premium', 29.99),
+    (11, 504, '2024-03-01', 'downgrade', 'standard', 19.99),
+    (12, 504, '2024-03-30', 'cancel', None, 0.00),
+    (13, 505, '2024-02-01', 'start', 'basic', 9.99),
+    (14, 505, '2024-02-28', 'upgrade', 'standard', 19.99),
+    (15, 506, '2024-01-20', 'start', 'premium', 29.99),
+    (16, 506, '2024-03-10', 'downgrade', 'basic', 9.99)
+]
+
+columns = ["event_id","user_id","event_date","event_type","plan_name","monthly_amount"]
+
+# convert list to data frame
+df = spark.createDataFrame(data,columns)
+
+print()
+print("==========Input Data=============")
+df.show()
+
+print()
+print("==========Expected output=============")
+
+# #  # # # # # #### ================ Approach->1 : (DSL)
+win_plan_name=Window.partitionBy('user_id').orderBy(desc('event_date'),desc('event_id'))
+win_monthly_amt=Window.partitionBy('user_id').orderBy(desc('event_date'),desc('event_id'))
+
+df=((df.select('user_id'
+             , first_value('plan_name').over(win_plan_name).alias('current_plan')
+             , first_value('monthly_amount').over(win_monthly_amt).alias('current_monthly_amount')
+             , max('monthly_amount').over(Window.partitionBy('user_id')).alias('max_historical_amount')
+             , min('event_date').over(Window.partitionBy('user_id')).alias('first_date')
+             , max('event_date').over(Window.partitionBy('user_id')).alias('last_date')
+             , max(
+                    when(col('event_type')=='downgrade',1).otherwise(0))
+                    .over(Window.partitionBy('user_id')
+                   ).alias('has_downgrade')
+             ).distinct()
+    )
+    .withColumn('days_as_subscriber',datediff(col('last_date'),col('first_date')))
+    .where(
+        (col('current_plan').isNotNull()) &
+        (col('has_downgrade')==1) &
+        (col('days_as_subscriber')>=60) &
+        (col('max_historical_amount')>0) &
+        ((col('current_monthly_amount')/col('max_historical_amount'))*100.0<50.0)
+    ).drop(col('last_date'),'first_date')
+        .orderBy(desc('days_as_subscriber'),asc('user_id')))
+
+df.show()
+
+
+# # # # #### ================ Approach->2 : (SQL)
+# df.createOrReplaceTempView("app_events")
+#
+#
+# sSQL="""
+#     WITH zombie AS (
+#         SELECT A.session_id
+#         ,A.user_id
+#         ,MIN(event_timestamp) AS session_start
+#         ,MAX(event_timestamp) AS session_end
+#         ,COUNT(CASE WHEN A.event_type='scroll' THEN 1 END) AS scroll_count
+#         ,COUNT(CASE WHEN A.event_type='click' THEN 1 END) AS click_count
+#         ,COUNT(CASE WHEN A.event_type='purchase' THEN 1 END) AS purchase_count
+#         FROM app_events A GROUP BY A.session_id, A.user_id
+#     ), zombie_session AS (
+#         SELECT Z.*,DATEDIFF(MINUTE,Z.session_start,Z.session_end) AS duration FROM zombie Z
+#     )
+#     SELECT Z.session_id,Z.user_id,Z.duration AS session_duration_minutes, Z.scroll_count
+#     FROM zombie_session Z
+#     WHERE duration>30 AND scroll_count>4 AND (click_count*1.00/scroll_count)<0.20 AND purchase_count<=0
+#     ORDER BY scroll_count DESC, session_id ASC;
+# """
+# df=spark.sql(sSQL)
+# df.show()
+
+## to show DAG or query estimation plan un comment the following lines and go to the url to see spark UI
+#input("Press Enter to exit...")
+#######http://localhost:4040/jobs/
+
+# end timer to see execution time
+end_timer()
