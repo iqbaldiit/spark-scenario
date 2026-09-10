@@ -176,26 +176,47 @@ df.show()
 
 
 # # # # #### ================ Approach->2 : (SQL)
-# df.createOrReplaceTempView("app_events")
+# df.createOrReplaceTempView("subscription_events")
 #
 #
 # sSQL="""
-#     WITH zombie AS (
-#         SELECT A.session_id
-#         ,A.user_id
-#         ,MIN(event_timestamp) AS session_start
-#         ,MAX(event_timestamp) AS session_end
-#         ,COUNT(CASE WHEN A.event_type='scroll' THEN 1 END) AS scroll_count
-#         ,COUNT(CASE WHEN A.event_type='click' THEN 1 END) AS click_count
-#         ,COUNT(CASE WHEN A.event_type='purchase' THEN 1 END) AS purchase_count
-#         FROM app_events A GROUP BY A.session_id, A.user_id
-#     ), zombie_session AS (
-#         SELECT Z.*,DATEDIFF(MINUTE,Z.session_start,Z.session_end) AS duration FROM zombie Z
+#     WITH user_stats AS (
+#         SELECT
+#             user_id,
+#             -- Latest non‑cancel event (most recent by date, tie‑break by event_id)
+#             FIRST_VALUE(plan_name)   OVER (PARTITION BY user_id ORDER BY event_date DESC, event_id DESC) AS current_plan,
+#             FIRST_VALUE(monthly_amount) OVER (PARTITION BY user_id ORDER BY event_date DESC, event_id DESC) AS current_amount,
+#             -- Historical maximum monthly amount
+#             MAX(monthly_amount) OVER (PARTITION BY user_id) AS max_historical,
+#             -- First and last event dates for subscriber tenure
+#             MIN(event_date) OVER (PARTITION BY user_id) AS first_date,
+#             MAX(event_date) OVER (PARTITION BY user_id) AS last_date,
+#             -- Flag if user has ever downgraded
+#             MAX(CASE WHEN event_type = 'downgrade' THEN 1 ELSE 0 END) OVER (PARTITION BY user_id) AS has_downgrade
+#         FROM subscription_events
+#     ),active_users AS (
+#         SELECT
+#             user_id,
+#             current_plan,
+#             current_amount,
+#             max_historical,
+#             DATEDIFF(DAY, first_date, last_date) AS days_as_subscriber
+#         FROM user_stats
+#         WHERE
+#             current_plan IS NOT NULL          -- latest event is not 'cancel' (plan_name is NULL for cancel)
+#             AND has_downgrade = 1
+#             AND DATEDIFF(DAY, first_date, last_date) >= 60
+#             AND max_historical > 0            -- avoid division by zero
+#             AND (current_amount * 100.0 / max_historical) < 50.0
 #     )
-#     SELECT Z.session_id,Z.user_id,Z.duration AS session_duration_minutes, Z.scroll_count
-#     FROM zombie_session Z
-#     WHERE duration>30 AND scroll_count>4 AND (click_count*1.00/scroll_count)<0.20 AND purchase_count<=0
-#     ORDER BY scroll_count DESC, session_id ASC;
+#     SELECT DISTINCT
+#         user_id,
+#         current_plan,
+#         current_amount AS current_monthly_amount,
+#         max_historical AS max_historical_amount,
+#         days_as_subscriber
+#     FROM active_users
+#     ORDER BY days_as_subscriber DESC, user_id ASC;
 # """
 # df=spark.sql(sSQL)
 # df.show()
