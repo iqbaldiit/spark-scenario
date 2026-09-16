@@ -129,67 +129,67 @@ df.show()
 print()
 print("==========Expected output=============")
 
-# # #  # # # # # #### ================ Approach->1 : (DSL)
-#
-# df_top_user=(df.groupBy("user_id").agg(
-#     count("course_id").alias("course_count")
-#     ,avg("course_rating").alias("avg_rating")
-#     )
-#     .where((col("course_count")>=5) & (col("avg_rating")>=4))
-#     .select("user_id")
-# )
-#
-# df_top_course=(df.join(df_top_user,on="user_id",how="inner")
-#                .withColumn("second_course",lead("course_name")
-#                            .over(Window.partitionBy("user_id")
-#                                  .orderBy("completion_date"))
-#                )
-#                .where(col("second_course").isNotNull())
-#                .select(col("course_name").alias("first_course"),col("second_course"))
-# )
-#
-# df_result=(df_top_course.groupby("first_course","second_course")
-#            .agg(count("*").alias("transition_count"))
-#            .orderBy(desc("transition_count"),asc("first_course"),asc("second_course"))
-# )
-#
-# df_result.show(truncate=False)
+# #  # # # # # #### ================ Approach->1 : (DSL)
 
-# # # #### ================ Approach->2 : (SQL)
-df.createOrReplaceTempView("course_completions")
-
-
-sSQL="""
-    WITH top_users AS (
-        SELECT user_id
-        FROM course_completions
-        GROUP BY user_id
-        HAVING COUNT(*) >= 5 AND AVG(CAST(course_rating AS FLOAT)) >= 4
-    ),
-    ordered_courses AS (
-        SELECT 
-            user_id,
-            course_name,
-            completion_date,
-            LEAD(course_name) OVER (PARTITION BY user_id ORDER BY completion_date) AS next_course
-        FROM course_completions
-        WHERE user_id IN (SELECT user_id FROM top_users)
-    ),
-    pairs AS (
-        SELECT course_name AS first_course, next_course AS second_course
-        FROM ordered_courses
-        WHERE next_course IS NOT NULL
+df_top_user=(df.groupBy("user_id").agg(
+    count("course_id").alias("course_count")
+    ,avg("course_rating").alias("avg_rating")
     )
-    SELECT 
-        first_course,
-        second_course,
-        COUNT(*) AS transition_count
-    FROM pairs
-    GROUP BY first_course, second_course
-    ORDER BY transition_count DESC, first_course ASC, second_course ASC;
-"""
-df=spark.sql(sSQL)
-df.show()
+    .where((col("course_count")>=5) & (col("avg_rating")>=4))
+    .select("user_id")
+)
+
+df_top_course=(df.join(df_top_user,on="user_id",how="inner")
+               .withColumn("second_course",lead("course_name")
+                           .over(Window.partitionBy("user_id")
+                                 .orderBy("completion_date"))
+               )
+               .where(col("second_course").isNotNull())
+               .select(col("course_name").alias("first_course"),col("second_course"))
+)
+
+df_result=(df_top_course.groupby("first_course","second_course")
+           .agg(count("*").alias("transition_count"))
+           .orderBy(desc("transition_count"),asc("first_course"),asc("second_course"))
+)
+
+df_result.show(truncate=False)
+
+# # # # #### ================ Approach->2 : (SQL)
+# df.createOrReplaceTempView("course_completions")
+#
+#
+# sSQL="""
+#     WITH top_users AS (
+#         SELECT user_id
+#         FROM course_completions
+#         GROUP BY user_id
+#         HAVING COUNT(*) >= 5 AND AVG(CAST(course_rating AS FLOAT)) >= 4
+#     ),
+#     ordered_courses AS (
+#         SELECT
+#             user_id,
+#             course_name,
+#             completion_date,
+#             LEAD(course_name) OVER (PARTITION BY user_id ORDER BY completion_date) AS next_course
+#         FROM course_completions
+#         WHERE user_id IN (SELECT user_id FROM top_users)
+#     ),
+#     pairs AS (
+#         SELECT course_name AS first_course, next_course AS second_course
+#         FROM ordered_courses
+#         WHERE next_course IS NOT NULL
+#     )
+#     SELECT
+#         first_course,
+#         second_course,
+#         COUNT(*) AS transition_count
+#     FROM pairs
+#     GROUP BY first_course, second_course
+#     ORDER BY transition_count DESC, first_course ASC, second_course ASC;
+# """
+# df=spark.sql(sSQL)
+# df.show()
 
 
 
