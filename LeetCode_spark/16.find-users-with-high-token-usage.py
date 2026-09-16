@@ -106,47 +106,31 @@ df.show()
 print()
 print("==========Expected output=============")
 
-# # #  # # # # # #### ================ Approach->1 : (DSL)
-#
-# df_top_user=(df.groupBy("user_id").agg(
-#     count("course_id").alias("course_count")
-#     ,avg("course_rating").alias("avg_rating")
-#     )
-#     .where((col("course_count")>=5) & (col("avg_rating")>=4))
-#     .select("user_id")
-# )
-#
-# df_top_course=(df.join(df_top_user,on="user_id",how="inner")
-#                .withColumn("second_course",lead("course_name")
-#                            .over(Window.partitionBy("user_id")
-#                                  .orderBy("completion_date"))
-#                )
-#                .where(col("second_course").isNotNull())
-#                .select(col("course_name").alias("first_course"),col("second_course"))
-# )
-#
-# df_result=(df_top_course.groupby("first_course","second_course")
-#            .agg(count("*").alias("transition_count"))
-#            .orderBy(desc("transition_count"),asc("first_course"),asc("second_course"))
-# )
-#
-# df_result.show(truncate=False)
+# #  # # # # # #### ================ Approach->1 : (DSL)
 
-# # # #### ================ Approach->2 : (SQL)
-df.createOrReplaceTempView("prompts")
+df=(df.groupBy("user_id").agg((count('*').alias("prompt_count"))
+                             ,round(avg("tokens"),2).alias("avg_tokens")
+                             ,max("tokens").alias("max_token"))
+    .where((col("prompt_count")>=3) & (col("max_token")>col("avg_tokens")))
+    .orderBy(desc("avg_tokens"),asc("user_id")))
 
-
-sSQL="""
-    WITH tbl_summary AS (
-        SELECT user_id, COUNT(*) AS prompt_count, ROUND(AVG(tokens*1.00),2) AS avg_tokens, MAX(tokens*1.00) AS max_token   
-        FROM prompts GROUP BY user_id
-    )
-    SELECT user_id,prompt_count,avg_tokens FROM tbl_summary 
-    WHERE prompt_count>=3 AND max_token>avg_tokens
-    ORDER BY avg_tokens DESC, user_id ASC
-"""
-df=spark.sql(sSQL)
 df.show()
+
+# # # # #### ================ Approach->2 : (SQL)
+# df.createOrReplaceTempView("prompts")
+#
+#
+# sSQL="""
+#     WITH tbl_summary AS (
+#         SELECT user_id, COUNT(*) AS prompt_count, ROUND(AVG(tokens*1.00),2) AS avg_tokens, MAX(tokens*1.00) AS max_token
+#         FROM prompts GROUP BY user_id
+#     )
+#     SELECT user_id,prompt_count,avg_tokens FROM tbl_summary
+#     WHERE prompt_count>=3 AND max_token>avg_tokens
+#     ORDER BY avg_tokens DESC, user_id ASC
+# """
+# df=spark.sql(sSQL)
+# df.show()
 
 
 
