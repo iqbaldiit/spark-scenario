@@ -93,18 +93,24 @@ start_timer()
 
 #============ Data preparation===============
 data = [
-    (1, 'Write a blog outline', 120),
-    (1, 'Generate SQL query', 80),
-    (1, 'Summarize an article', 200),
-    (2, 'Create resume bullet', 60),
-    (2, 'Improve LinkedIn bio', 70),
-    (3, 'Explain neural networks', 300),
-    (3, 'Generate interview Q&A', 250),
-    (3, 'Write cover letter', 180),
-    (3, 'Optimize Python code', 220)
+    (1, 101, 'like'),
+    (1, 102, 'like'),
+    (1, 103, 'like'),
+    (1, 104, 'wow'),
+    (1, 105, 'like'),
+    (2, 201, 'like'),
+    (2, 202, 'wow'),
+    (2, 203, 'sad'),
+    (2, 204, 'like'),
+    (2, 205, 'wow'),
+    (3, 301, 'love'),
+    (3, 302, 'love'),
+    (3, 303, 'love'),
+    (3, 304, 'love'),
+    (3, 305, 'love')
 ]
 
-columns = ["user_id","prompt","tokens"]
+columns = ["user_id","content_id","reaction"]
 
 # convert list to data frame
 df = spark.createDataFrame(data,columns)
@@ -118,29 +124,20 @@ print("==========Expected output=============")
 
 # #  # # # # # #### ================ Approach->1 : (DSL)
 
-df=(df.groupBy("user_id").agg((count('*').alias("prompt_count"))
-                             ,round(avg("tokens"),2).alias("avg_tokens")
-                             ,max("tokens").alias("max_token"))
-    .where((col("prompt_count")>=3) & (col("max_token")>col("avg_tokens")))
-    .orderBy(desc("avg_tokens"),asc("user_id")))
+df_tot_rec=(df.groupBy("user_id").agg(count("*").alias("total_reactions"))
+            .where(col("total_reactions")>=5))
+
+df_dom_reaction=df.groupBy("user_id","reaction").agg(count("*").alias("reaction_count"))
+
+df=((df_tot_rec.alias("tr").join(df_dom_reaction.alias("dr"),"user_id","inner")
+    .withColumn("reaction_ratio",round(col("dr.reaction_count")/col("tr.total_reactions"),2))
+    .where(col("reaction_ratio")>=0.6)
+    ).select("tr.user_id",col("dr.reaction").alias("dominant_reaction"),"reaction_ratio")
+    .orderBy(desc("reaction_ratio"),asc("tr.user_id")))
 
 df.show()
 
-# # # # #### ================ Approach->2 : (SQL)
-# df.createOrReplaceTempView("prompts")
-#
-#
-# sSQL="""
-#     WITH tbl_summary AS (
-#         SELECT user_id, COUNT(*) AS prompt_count, ROUND(AVG(tokens*1.00),2) AS avg_tokens, MAX(tokens*1.00) AS max_token
-#         FROM prompts GROUP BY user_id
-#     )
-#     SELECT user_id,prompt_count,avg_tokens FROM tbl_summary
-#     WHERE prompt_count>=3 AND max_token>avg_tokens
-#     ORDER BY avg_tokens DESC, user_id ASC
-# """
-# df=spark.sql(sSQL)
-# df.show()
+
 
 
 
