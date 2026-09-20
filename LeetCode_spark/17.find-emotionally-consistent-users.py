@@ -122,22 +122,41 @@ df.show()
 print()
 print("==========Expected output=============")
 
-# #  # # # # # #### ================ Approach->1 : (DSL)
+# # #  # # # # # #### ================ Approach->1 : (DSL)
+#
+# df_tot_rec=(df.groupBy("user_id").agg(count("*").alias("total_reactions"))
+#             .where(col("total_reactions")>=5))
+#
+# df_dom_reaction=df.groupBy("user_id","reaction").agg(count("*").alias("reaction_count"))
+#
+# df=((df_tot_rec.alias("tr").join(df_dom_reaction.alias("dr"),"user_id","inner")
+#     .withColumn("reaction_ratio",round(col("dr.reaction_count")/col("tr.total_reactions"),2))
+#     .where(col("reaction_ratio")>=0.6)
+#     ).select("tr.user_id",col("dr.reaction").alias("dominant_reaction"),"reaction_ratio")
+#     .orderBy(desc("reaction_ratio"),asc("tr.user_id")))
+#
+# df.show()
 
-df_tot_rec=(df.groupBy("user_id").agg(count("*").alias("total_reactions"))
-            .where(col("total_reactions")>=5))
+# # # #### ================ Approach->2 : (SQL)
+df.createOrReplaceTempView("reactions")
 
-df_dom_reaction=df.groupBy("user_id","reaction").agg(count("*").alias("reaction_count"))
 
-df=((df_tot_rec.alias("tr").join(df_dom_reaction.alias("dr"),"user_id","inner")
-    .withColumn("reaction_ratio",round(col("dr.reaction_count")/col("tr.total_reactions"),2))
-    .where(col("reaction_ratio")>=0.6)
-    ).select("tr.user_id",col("dr.reaction").alias("dominant_reaction"),"reaction_ratio")
-    .orderBy(desc("reaction_ratio"),asc("tr.user_id")))
-
+sSQL="""
+    WITH tbl_total_reaction AS(
+        SELECT user_id,COUNT(1) AS total_reactions FROM reactions GROUP BY user_id HAVING COUNT(1)>=5
+    ), tbl_dom_reaction AS (
+        SELECT user_id,reaction,COUNT(1) AS reaction_count FROM reactions GROUP BY user_id ,reaction
+    ), tbl_result AS (
+        SELECT tr.user_id,dr.reaction AS dominant_reaction
+        ,ROUND(1.00*dr.reaction_count/tr.total_reactions,2) AS reaction_ratio
+        FROM tbl_total_reaction tr
+        INNER JOIN tbl_dom_reaction dr ON tr.user_id=dr.user_id
+        WHERE 1.00*dr.reaction_count/tr.total_reactions>=0.6
+    )
+    SELECT * FROM tbl_result ORDER BY reaction_ratio DESC, user_id ASC
+"""
+df=spark.sql(sSQL)
 df.show()
-
-
 
 
 
