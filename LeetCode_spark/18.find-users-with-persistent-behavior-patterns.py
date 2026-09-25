@@ -92,24 +92,26 @@ start_timer()
 
 #============ Data preparation===============
 data = [
-    (1, 101, 'like'),
-    (1, 102, 'like'),
-    (1, 103, 'like'),
-    (1, 104, 'wow'),
-    (1, 105, 'like'),
-    (2, 201, 'like'),
-    (2, 202, 'wow'),
-    (2, 203, 'sad'),
-    (2, 204, 'like'),
-    (2, 205, 'wow'),
-    (3, 301, 'love'),
-    (3, 302, 'love'),
-    (3, 303, 'love'),
-    (3, 304, 'love'),
-    (3, 305, 'love')
+    (1, '2024-01-01', 'login'),
+    (1, '2024-01-02', 'login'),
+    (1, '2024-01-03', 'login'),
+    (1, '2024-01-04', 'login'),
+    (1, '2024-01-05', 'login'),
+    (1, '2024-01-06', 'logout'),
+    (2, '2024-01-01', 'click'),
+    (2, '2024-01-02', 'click'),
+    (2, '2024-01-03', 'click'),
+    (2, '2024-01-04', 'click'),
+    (3, '2024-01-01', 'view'),
+    (3, '2024-01-02', 'view'),
+    (3, '2024-01-03', 'view'),
+    (3, '2024-01-04', 'view'),
+    (3, '2024-01-05', 'view'),
+    (3, '2024-01-06', 'view'),
+    (3, '2024-01-07', 'view')
 ]
 
-columns = ["user_id","content_id","reaction"]
+columns = ["user_id","action_date","action"]
 
 # convert list to data frame
 df = spark.createDataFrame(data,columns)
@@ -123,16 +125,24 @@ print("==========Expected output=============")
 
 # #  # # # # # #### ================ Approach->1 : (DSL)
 
-df_tot_rec=(df.groupBy("user_id").agg(count("*").alias("total_reactions"))
-            .where(col("total_reactions")>=5))
+win_lead=Window.partitionBy("user_id","action").orderBy("user_id","action","action_date")
+win_count=Window.partitionBy("user_id","action_date")
 
-df_dom_reaction=df.groupBy("user_id","reaction").agg(count("*").alias("reaction_count"))
+df=(df.withColumn("next_date",lead("action_date").over(win_lead))
+    .withColumn("action_count",count("*").over(win_count))
+    .withColumn("date_diff",datediff(col("next_date"),col("action_date")))
+    )
 
-df=((df_tot_rec.alias("tr").join(df_dom_reaction.alias("dr"),"user_id","inner")
-    .withColumn("reaction_ratio",round(col("dr.reaction_count")/col("tr.total_reactions"),2))
-    .where(col("reaction_ratio")>=0.6)
-    ).select("tr.user_id",col("dr.reaction").alias("dominant_reaction"),"reaction_ratio")
-    .orderBy(desc("reaction_ratio"),asc("tr.user_id")))
+df=(df.groupBy("user_id","action","action_count","date_diff").agg(
+    (1+sum("date_diff")).alias("streak_length")
+    ,min("action_date").alias("start_date")
+    ,max("next_date").alias("end_date")
+).where((col("action_count")==1)
+        & (col("date_diff")==1)
+        & (col("streak_length")>=5))
+    .select("user_id","action","streak_length","start_date","end_date")
+    .orderBy(desc("streak_length"),asc("user_id"))
+)
 
 df.show()
 
