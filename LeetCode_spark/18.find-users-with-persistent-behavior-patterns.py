@@ -123,49 +123,50 @@ df.show()
 print()
 print("==========Expected output=============")
 
-# #  # # # # # #### ================ Approach->1 : (DSL)
-
-win_lead=Window.partitionBy("user_id","action").orderBy("user_id","action","action_date")
-win_count=Window.partitionBy("user_id","action_date")
-
-df=(df.withColumn("next_date",lead("action_date").over(win_lead))
-    .withColumn("action_count",count("*").over(win_count))
-    .withColumn("date_diff",datediff(col("next_date"),col("action_date")))
-    )
-
-df=(df.groupBy("user_id","action","action_count","date_diff").agg(
-    (1+sum("date_diff")).alias("streak_length")
-    ,min("action_date").alias("start_date")
-    ,max("next_date").alias("end_date")
-).where((col("action_count")==1)
-        & (col("date_diff")==1)
-        & (col("streak_length")>=5))
-    .select("user_id","action","streak_length","start_date","end_date")
-    .orderBy(desc("streak_length"),asc("user_id"))
-)
-
-df.show()
-
-# # # # #### ================ Approach->2 : (SQL)
-# df.createOrReplaceTempView("reactions")
+# # #  # # # # # #### ================ Approach->1 : (DSL)
 #
+# win_lead=Window.partitionBy("user_id","action").orderBy("user_id","action","action_date")
+# win_count=Window.partitionBy("user_id","action_date")
 #
-# sSQL="""
-#     WITH tbl_total_reaction AS(
-#         SELECT user_id,COUNT(1) AS total_reactions FROM reactions GROUP BY user_id HAVING COUNT(1)>=5
-#     ), tbl_dom_reaction AS (
-#         SELECT user_id,reaction,COUNT(1) AS reaction_count FROM reactions GROUP BY user_id ,reaction
-#     ), tbl_result AS (
-#         SELECT tr.user_id,dr.reaction AS dominant_reaction
-#         ,ROUND(1.00*dr.reaction_count/tr.total_reactions,2) AS reaction_ratio
-#         FROM tbl_total_reaction tr
-#         INNER JOIN tbl_dom_reaction dr ON tr.user_id=dr.user_id
-#         WHERE 1.00*dr.reaction_count/tr.total_reactions>=0.6
+# df=(df.withColumn("next_date",lead("action_date").over(win_lead))
+#     .withColumn("action_count",count("*").over(win_count))
+#     .withColumn("date_diff",datediff(col("next_date"),col("action_date")))
 #     )
-#     SELECT * FROM tbl_result ORDER BY reaction_ratio DESC, user_id ASC
-# """
-# df=spark.sql(sSQL)
+#
+# df=(df.groupBy("user_id","action","action_count","date_diff").agg(
+#     (1+sum("date_diff")).alias("streak_length")
+#     ,min("action_date").alias("start_date")
+#     ,max("next_date").alias("end_date")
+# ).where((col("action_count")==1)
+#         & (col("date_diff")==1)
+#         & (col("streak_length")>=5))
+#     .select("user_id","action","streak_length","start_date","end_date")
+#     .orderBy(desc("streak_length"),asc("user_id"))
+# )
+#
 # df.show()
+
+# # # #### ================ Approach->2 : (SQL)
+df.createOrReplaceTempView("activity")
+
+sSQL="""
+    WITH tbl_lead AS (
+    SELECT *
+    , LEAD(action_date) OVER (PARTITION BY user_id,action ORDER BY user_id,action,action_date) AS next_date
+    , COUNT(action) OVER (PARTITION BY user_id,action_date) AS action_count
+    FROM activity 
+    )
+    SELECT user_id,action
+    ,SUM(DATEDIFF(DAY,action_date,next_date))+1 AS streak_length 
+    ,MIN(action_date) start_date
+    ,MAX(next_date) end_date
+    FROM tbl_lead WHERE action_count=1 AND DATEDIFF(DAY,action_date,next_date)=1
+    GROUP BY user_id,action
+    HAVING SUM(DATEDIFF(DAY,action_date,next_date))+1>=5
+    ORDER BY streak_length DESC, user_id ASC
+"""
+df=spark.sql(sSQL)
+df.show()
 
 
 
